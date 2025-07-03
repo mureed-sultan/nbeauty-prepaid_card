@@ -38,6 +38,13 @@
                         <field name="pos_order_id"/>
                         <field name="branch_id"/>
                         <field name="state"/>
+<button name="open_pos_order"
+        string="View Order"
+        type="object"
+        icon="fa-external-link"
+        attrs="{'invisible': [('pos_order_id','=',False)]}"/>
+
+
                     </list>
                 </field>
             </form>

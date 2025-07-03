@@ -124,14 +124,16 @@ patch(PaymentScreen.prototype, {
     },
 async validateOrder(isForceValidate) {
     const order = this.currentOrder;
+    console.log(order)
+    console.log(this.pos)
     const totalAmount = order.get_total_with_tax();
 
     const cardId = runtimeNCardData?.card_id;
     const cardNo = runtimeNCardData?.card_no;
 
-    const orderUID = order.uid || "";                          // Can be empty
+    const orderUID = order?.uuid || "";  // ✅ always set in Odoo 18 OWL
     const orderRef = order.name || order.pos_reference || "";  // Can be empty
-    const branchId = null;                                     // ✅ Send null
+const branchId = null;  // e.g., "NBS City Life AJM"
 
     console.log("🟡 Order UID:", orderUID);
     console.log("🟡 Card ID:", cardId);

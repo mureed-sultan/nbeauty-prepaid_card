@@ -17,18 +17,19 @@
               parent="menu_nbeauty_prepaid_cards_root"
               action="action_prepaid_card"
               sequence="30"/>
+
     <menuitem id="menu_topup_card_wizard"
               name="Top-Up Card"
               parent="menu_nbeauty_prepaid_cards_root"
-              action="nbeauty_prepaid_card.action_nbeauty_topup_wizard"
+              action="action_nbeauty_topup_wizard"
               sequence="35"/>
 
 
-<menuitem id="menu_prepaid_transaction_report"
-          name="Transaction Report"
-          parent="menu_nbeauty_prepaid_cards_root"
-          action="nbeauty_prepaid_card.action_prepaid_transaction_report"
-          sequence="60"/>
+    <menuitem id="menu_prepaid_transaction_report"
+              name="Transaction Report"
+              parent="menu_nbeauty_prepaid_cards_root"
+              action="nbeauty_prepaid_card.action_prepaid_transaction_report"
+              sequence="60"/>
 
 
 </odoo>

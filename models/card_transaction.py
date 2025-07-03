@@ -39,7 +39,11 @@ class NBeautyPrepaidCardTransaction(models.Model):
         related='card_id.currency_id',
         store=True
     )
-    pos_order_id = fields.Many2one('pos.order', string="POS Order", ondelete='set null')
+    pos_order_id = fields.Many2one(
+        'pos.order',
+        string="POS Order",
+        readonly=True,
+    )
     user_id = fields.Many2one(
         'res.users',
         string="Handled By",
@@ -83,6 +87,19 @@ class NBeautyPrepaidCardTransaction(models.Model):
             'branch_id': branch_id,
         })
 
+    def open_pos_order(self):
+        self.ensure_one()
+        if not self.pos_order_id:
+            raise UserError("No linked POS Order.")
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'POS Order',
+            'res_model': 'pos.order',
+            'view_mode': 'form',
+            'res_id': self.pos_order_id.id,
+            'target': 'current',
+        }
+
 
 class PrepaidTransactionReport(models.TransientModel):
     _name = 'nbeauty.prepaid.transaction.report'
@@ -113,8 +130,8 @@ class PrepaidTransactionReport(models.TransientModel):
             rec.transaction_ids = [(6, 0, transactions.ids)]
 
     @api.model
-    def process_ncard_payment(self, card_id, amount, order_uid=None, pos_ref=None, branch_id=None):
-        card = self.browse(card_id)
+    def process_ncard_payment(self, card_no, amount, order_uid=None, pos_ref=None, branch_id=None):
+        card = self.search([('name', '=', card_no)], limit=1)
         if not card:
             raise UserError("Card not found.")
 
@@ -127,10 +144,9 @@ class PrepaidTransactionReport(models.TransientModel):
         if card.balance < amount:
             raise UserError("Insufficient card balance.")
 
-        # Deduct balance
-        card.balance -= amount
+        # Deduct balance manually (careful since balance is compute=True in older version)
+        card.write({'balance': card.balance - amount})
 
-        # Find POS Order using UID (optional)
         pos_order = self.env['pos.order'].search([('uid', '=', order_uid)], limit=1) if order_uid else None
 
         self.env['nbeauty.prepaid.card.transaction'].create({
@@ -138,7 +154,10 @@ class PrepaidTransactionReport(models.TransientModel):
             'amount': amount,
             'transaction_type': 'pos_payment',
             'balance_after': card.balance,
-            'description': f'POS Payment {pos_ref or ""}',
-            'pos_order_id': pos_order.id if pos_order else False,
+            'description': 'POS Payment',
+            'pos_order_id': pos_order.id if pos_order else None,
             'branch_id': branch_id,
         })
+
+        return True
+
