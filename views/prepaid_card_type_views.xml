@@ -1,0 +1,64 @@
+<odoo>
+    <!-- Card Type List View -->
+    <record id="view_prepaid_card_type_list" model="ir.ui.view">
+        <field name="name">prepaid.card.type.list</field>
+        <field name="model">nbeauty.prepaid.card.type</field>
+        <field name="arch" type="xml">
+            <list string="Prepaid Card Templates">
+                <field name="name"/>
+                <field name="base_amount"/>
+                <field name="bonus_percentage"/>
+                <field name="bonus_amount"/>
+                <field name="validity"/>
+                <field name="service_discount"/>
+                <field name="product_discount"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Card Type Form View -->
+    <record id="view_prepaid_card_type_form" model="ir.ui.view">
+        <field name="name">prepaid.card.type.form</field>
+        <field name="model">nbeauty.prepaid.card.type</field>
+        <field name="arch" type="xml">
+            <form string="Prepaid Card Template">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="code"/>
+                        <field name="base_amount"/>
+                        <field name="bonus_percentage"/>
+                        <field name="bonus_amount" readonly="1"/>
+                        <field name="validity"/>
+                        <field name="service_discount"/>
+                        <field name="product_discount"/>
+                        <field name="perks" help="Describe the special benefits, privileges, or services that come with this card type."/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="active"/>
+                    </group>
+                    <notebook>
+                        <page string="Allowed Services">
+                            <field name="allowed_service_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </page>
+                        <page string="Allowed Products">
+                            <field name="allowed_product_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </page>
+                        <page string="Product Categories">
+                            <field name="product_category_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </page>
+                    </notebook>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action for Card Type -->
+    <record id="action_prepaid_card_type" model="ir.actions.act_window">
+        <field name="name">Prepaid Card Templates</field>
+        <field name="res_model">nbeauty.prepaid.card.type</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,11 @@
+<odoo>
+    <data noupdate="1">
+        <record id="pos_payment_method_ncard" model="pos.payment.method">
+            <field name="name">Pay with N Card</field>
+            <field name="is_ncard_method" eval="True"/>
+            <field name="receivable_account_id" ref="account.data_account_receivable"/>
+            <field name="cash_journal_id" ref="point_of_sale.account_journal_cash"/>
+            <field name="payment_method_type">manual</field>
+        </record>
+    </data>
+</odoo>

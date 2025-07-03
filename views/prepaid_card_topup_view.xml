@@ -1,0 +1,49 @@
+<odoo>
+    <!-- Top-Up Wizard Form View -->
+    <record id="view_nbeauty_topup_wizard_form" model="ir.ui.view">
+        <field name="name">nbeauty.topup.wizard.form</field>
+        <field name="model">nbeauty.prepaid.card.topup.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Top-Up Prepaid Card">
+                <group string="Search Card">
+                    <field name="search_type"/>
+                    <field name="search_value"/>
+                    <button name="action_fetch_card"
+                            string="Fetch Card"
+                            type="object"
+                            class="btn-primary"/>
+                </group>
+
+                <group string="Card Details">
+                    <field name="card_id" readonly="1"/>
+                    <field name="customer_id" readonly="1"/>
+    <field name="customer_phone" readonly="1"/>
+                    <field name="current_balance" readonly="1"/>
+                </group>
+
+                <group string="Top-Up Info">
+                    <field name="topup_amount"/>
+                    <field name="description"/>
+                    <button name="action_topup"
+                            string="Update"
+                            type="object"
+                            class="btn-success"
+                            style="margin-top: 10px"/>
+                </group>
+
+                <footer>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_nbeauty_topup_wizard" model="ir.actions.act_window">
+        <field name="name">Top-Up Wizard</field>
+        <field name="res_model">nbeauty.prepaid.card.topup.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_nbeauty_topup_wizard_form"/>
+        <field name="target">current</field>
+    </record>
+</odoo>
