@@ -16,6 +16,7 @@ class NCardPopup extends Component {
         order: Object,
         paymentMethod: Object,
         close: Function,
+        pos: Object,
     };
 
     setup() {
@@ -28,50 +29,56 @@ class NCardPopup extends Component {
         onMounted(() => this.inputRef.el.focus());
     }
 
-    async fetchCardDetails() {
-        const cardNo = this.state.cardNo.trim();
-        this.state.error = "";
+async fetchCardDetails() {
+    const cardNo = this.state.cardNo.trim();
+    this.state.error = "";
 
-        if (!cardNo) {
-            this.state.error = "Please enter a card number.";
+    if (!cardNo) {
+        this.state.error = "Please enter a card number.";
+        return;
+    }
+
+    try {
+        const card = await this.env.services.orm.call(
+            "nbeauty.prepaid.card",
+            "get_card_info",
+            [cardNo]
+        );
+
+        if (!card) {
+            this.state.error = "Card not found.";
             return;
         }
 
-        try {
-            const card = await this.env.services.orm.call(
-                "nbeauty.prepaid.card",
-                "get_card_info",
-                [cardNo]
-            );
+        const orderTotal = this.props.order.get_total_with_tax();
+        const isExpired = card.expiry_date && new Date(card.expiry_date) < new Date();
 
-            if (!card) {
-                this.state.error = "Card not found.";
-                return;
-            }
-
-            const orderTotal = this.props.order.get_total_with_tax();
-            const isExpired = card.expiry_date && new Date(card.expiry_date) < new Date();
-
-            if (isExpired) {
-                this.state.error = "Card is expired.";
-                return;
-            }
-
-            if (card.state !== "active") {
-                this.state.error = "Card is not active.";
-                return;
-            }
-
-            if (card.balance < orderTotal) {
-                this.state.error = "Card has insufficient balance.";
-                return;
-            }
-
-            this.state.cardInfo = card;
-        } catch (err) {
-            this.state.error = "Server error. Try again.";
+        if (isExpired) {
+            this.state.error = "Card is expired.";
+            return;
         }
+
+        if (card.state !== "active") {
+            this.state.error = "Card is not active.";
+            return;
+        }
+
+        if (card.balance < orderTotal) {
+            this.state.error = "Card has insufficient balance.";
+            return;
+        }
+
+        // ✅ SUCCESS: Set card info and clear error
+        this.state.cardInfo = card;
+        this.state.error = "";
+
+    } catch (err) {
+        this.state.error = "Server error. Try again.";
+        console.error("Server error:", err);
     }
+}
+
+
 
     proceed() {
         if (!this.state.cardInfo) {
@@ -88,7 +95,6 @@ class NCardPopup extends Component {
             card_no: cardNo,
         };
 
-        console.log("💾 [NCard] Stored card info for order:", cardId, cardNo);
 
         this.props.order.add_paymentline(this.props.paymentMethod);
 
@@ -111,6 +117,7 @@ patch(PaymentScreen.prototype, {
                 title: "Enter NCard Number",
                 order: this.currentOrder,
                 paymentMethod,
+                pos: this.pos,
             });
 
             if (!confirmed) {
@@ -124,8 +131,6 @@ patch(PaymentScreen.prototype, {
     },
 async validateOrder(isForceValidate) {
     const order = this.currentOrder;
-    console.log(order)
-    console.log(this.pos)
     const totalAmount = order.get_total_with_tax();
 
     const cardId = runtimeNCardData?.card_id;
@@ -135,22 +140,13 @@ async validateOrder(isForceValidate) {
     const orderRef = order.name || order.pos_reference || "";  // Can be empty
 const branchId = null;  // e.g., "NBS City Life AJM"
 
-    console.log("🟡 Order UID:", orderUID);
-    console.log("🟡 Card ID:", cardId);
-    console.log("🟡 Card No:", cardNo);
-    console.log("🟡 Total Amount:", totalAmount);
-    console.log("🟡 POS Reference:", orderRef);
-    console.log("🟡 Branch ID:", branchId);
-
     if (cardId && totalAmount > 0) {
         try {
-            console.log("🔵 Calling backend method: process_ncard_payment...");
             await this.env.services.orm.call(
                 "nbeauty.prepaid.card",
                 "process_ncard_payment",
                 [cardNo, totalAmount, orderUID, orderRef, branchId]  // ✅ Send values, even if empty
             );
-            console.log("🟢 Backend call success ✅");
         } catch (err) {
             alert("Card Payment Error: " + (err.message || "Could not deduct from card."));
             console.error("❌ Backend call failed:", err);

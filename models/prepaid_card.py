@@ -112,6 +112,8 @@ class NBeautyPrepaidCard(models.Model):
             'expiry_date': card.expiry_date.strftime('%Y-%m-%d') if card.expiry_date else '',
             'balance': card.balance,
             'state': card.state,
+            'card_type_name': card.card_type_id.name,  # ✅ Added this
+
         }
 
     def create_topup_transaction(self, card_id, amount, description, branch_id=False):

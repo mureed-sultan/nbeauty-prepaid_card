@@ -37,18 +37,6 @@
                         <field name="currency_id" invisible="1"/>
                         <field name="active"/>
                     </group>
-                    <notebook>
-                        <page string="Allowed Services">
-                            <field name="allowed_service_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                        </page>
-                        <page string="Allowed Products">
-                            <field name="allowed_product_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                        </page>
-                        <page string="Product Categories">
-                            <field name="product_category_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                        </page>
-                    </notebook>
-
                 </sheet>
             </form>
         </field>
@@ -60,5 +48,4 @@
         <field name="res_model">nbeauty.prepaid.card.type</field>
         <field name="view_mode">list,form</field>
     </record>
-
 </odoo>

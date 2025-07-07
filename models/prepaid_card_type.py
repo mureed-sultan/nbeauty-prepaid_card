@@ -20,32 +20,32 @@ class NBeautyPrepaidCardType(models.Model):
     service_discount = fields.Float(string="Service Discount (%)")
     product_discount = fields.Float(string="Product Discount (%)")
 
-    allowed_service_ids = fields.Many2many(
-        'product.template',
-        'prepaid_card_type_service_rel',
-        'card_type_id',
-        'service_id',
-        string="Allowed Services",
-        domain=[('type', '=', 'service')],
-    )
+    # allowed_service_ids = fields.Many2many(
+    #     'product.template',
+    #     'prepaid_card_type_service_rel',
+    #     'card_type_id',
+    #     'service_id',
+    #     string="Allowed Services",
+    #     domain=[('type', '=', 'service')],
+    # )
 
-    allowed_product_ids = fields.Many2many(
-        'product.template',
-        'prepaid_card_type_product_rel',
-        'card_type_id',
-        'product_id',
-        string="Allowed Products",
-        domain=[('type', 'in', ['product', 'consu'])],
-    )
-    product_category_ids = fields.Many2many(
-        'product.category',
-        'prepaid_card_type_category_rel',
-        'card_type_id',
-        'category_id',
-        string="Allowed Product Categories",
-        domain=[('name', 'like', 'All//%')],
-        required=True
-    )
+    # allowed_product_ids = fields.Many2many(
+    #     'product.template',
+    #     'prepaid_card_type_product_rel',
+    #     'card_type_id',
+    #     'product_id',
+    #     string="Allowed Products",
+    #     domain=[('type', 'in', ['product', 'consu'])],
+    # )
+    # product_category_ids = fields.Many2many(
+    #     'product.category',
+    #     'prepaid_card_type_category_rel',
+    #     'card_type_id',
+    #     'category_id',
+    #     string="Allowed Product Categories",
+    #     domain=[('name', 'like', 'All//%')],
+    #     required=True
+    # )
 
     perks = fields.Text(string="Perks")
     active = fields.Boolean(default=True)

@@ -18,8 +18,13 @@
                 </group>
                 <group string="Top-Up Info">
                     <field name="topup_amount"/>
+                    <field name="bonus_amount" readonly="1"/>
                     <field name="description"/>
-                    <button name="action_topup" string="Update" type="object" class="btn-success"/>
+                    <button name="action_topup"
+                            string="Update"
+                            type="object"
+                            class="btn-success"
+                            modifiers='{"readonly": [["topup_amount", "=", false]]}'/>
                 </group>
                 <footer>
                     <button string="Cancel" special="cancel"/>
