@@ -1,15 +1,16 @@
 <odoo>
-    <!-- Card Type List View -->
+    <!-- List View for Prepaid Card Types -->
     <record id="view_prepaid_card_type_list" model="ir.ui.view">
         <field name="name">prepaid.card.type.list</field>
         <field name="model">nbeauty.prepaid.card.type</field>
         <field name="arch" type="xml">
             <list string="Prepaid Card Templates">
                 <field name="name"/>
+                <field name="code"/>
+                <field name="validity"/>
                 <field name="base_amount"/>
                 <field name="bonus_percentage"/>
                 <field name="bonus_amount"/>
-                <field name="validity"/>
                 <field name="service_discount"/>
                 <field name="product_discount"/>
                 <field name="active"/>
@@ -17,7 +18,7 @@
         </field>
     </record>
 
-    <!-- Card Type Form View -->
+    <!-- Form View for Prepaid Card Types -->
     <record id="view_prepaid_card_type_form" model="ir.ui.view">
         <field name="name">prepaid.card.type.form</field>
         <field name="model">nbeauty.prepaid.card.type</field>
@@ -25,27 +26,46 @@
             <form string="Prepaid Card Template">
                 <sheet>
                     <group>
-                        <field name="name"/>
-                        <field name="code"/>
-                        <field name="base_amount"/>
-                        <field name="bonus_percentage"/>
-                        <field name="bonus_amount" readonly="1"/>
-                        <field name="validity"/>
-                        <field name="service_discount"/>
-                        <field name="product_discount"/>
-                        <field name="perks" help="Describe the special benefits, privileges, or services that come with this card type."/>
-                        <field name="currency_id" invisible="1"/>
-                        <field name="active"/>
+                        <group string="Basic Info" colspan="2">
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="validity"/>
+                            <field name="base_amount"/>
+                        </group>
+
+                        <group string="Bonus &amp; Discounts" colspan="2">
+                            <field name="bonus_percentage" help="Bonus % added to the top-up amount."/>
+                            <field name="bonus_amount" readonly="1"/>
+                            <field name="service_discount"/>
+                            <field name="product_discount"/>
+                        </group>
                     </group>
+
+                    <group string="Cardholder Perks">
+                        <field name="perks" placeholder="e.g. Free quarterly add-ons, AED 250 product voucher after AED 6,000 spend"/>
+                    </group>
+
+                    <group string="Configuration" invisible="1">
+                        <field name="currency_id"/>
+                    </group>
+
+                    <footer>
+                        <field name="active"/>
+                    </footer>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <!-- Action for Card Type -->
+    <!-- Action for Prepaid Card Types -->
     <record id="action_prepaid_card_type" model="ir.actions.act_window">
         <field name="name">Prepaid Card Templates</field>
         <field name="res_model">nbeauty.prepaid.card.type</field>
         <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p>
+                Manage prepaid card configurations (NSpark, NGlow, NRadiance). Define bonuses, discounts, and perks.
+            </p>
+        </field>
     </record>
 </odoo>

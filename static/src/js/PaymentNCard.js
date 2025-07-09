@@ -17,24 +17,37 @@ class NCardPopup extends Component {
         paymentMethod: Object,
         close: Function,
         pos: Object,
+        autoSearchName: { type: String, optional: true },
     };
 
-    setup() {
-        this.state = useState({
-            cardNo: "",
-            cardInfo: undefined,
-            error: "",
-        });
-        this.inputRef = useRef("input");
-        onMounted(() => this.inputRef.el.focus());
-    }
+setup() {
+    this.state = useState({
+        cardNo: "",
+        cardInfo: undefined,
+        error: "",
+        searchMode: "card_no",  // default
+    });
+    this.inputRef = useRef("input");
+
+    onMounted(async () => {
+        this.inputRef.el.focus();
+
+        // 🧠 Auto-search by name if provided
+        if (this.props.autoSearchName) {
+            this.state.searchMode = "name";
+            this.state.cardNo = this.props.autoSearchName;
+            await this.fetchCardDetails();  // trigger auto fetch
+        }
+    });
+}
 
 async fetchCardDetails() {
-    const cardNo = this.state.cardNo.trim();
+    const query = this.state.cardNo.trim();
+    const mode = this.state.searchMode || "card_no";
     this.state.error = "";
 
-    if (!cardNo) {
-        this.state.error = "Please enter a card number.";
+    if (!query) {
+        this.state.error = "Please enter a value to search.";
         return;
     }
 
@@ -42,7 +55,7 @@ async fetchCardDetails() {
         const card = await this.env.services.orm.call(
             "nbeauty.prepaid.card",
             "get_card_info",
-            [cardNo]
+            [query, mode]  // 🟢 Pass both query and mode
         );
 
         if (!card) {
@@ -68,7 +81,6 @@ async fetchCardDetails() {
             return;
         }
 
-        // ✅ SUCCESS: Set card info and clear error
         this.state.cardInfo = card;
         this.state.error = "";
 
@@ -80,6 +92,7 @@ async fetchCardDetails() {
 
 
 
+
     proceed() {
         if (!this.state.cardInfo) {
             this.state.error = "Card not validated.";
@@ -87,7 +100,7 @@ async fetchCardDetails() {
         }
 
         const cardId = this.state.cardInfo.id;
-        const cardNo = this.state.cardNo;
+    const cardNo = this.state.cardInfo.card_no;  // ✅ Use real card number from backend
 
         // ✅ Store in runtime variable
         runtimeNCardData = {
@@ -113,11 +126,16 @@ async fetchCardDetails() {
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
         if (paymentMethod?.name === "Pay with N Card") {
+             const customer = this.currentOrder.get_partner();
+             const customerName = customer ? customer.name : "(No customer selected)";
+             console.log("🧾 Selected Customer:", customerName);
+
             const { confirmed, payload } = await this.env.services.dialog.add(NCardPopup, {
                 title: "Enter NCard Number",
                 order: this.currentOrder,
                 paymentMethod,
                 pos: this.pos,
+                autoSearchName: customerName, // ✅ pass to popup
             });
 
             if (!confirmed) {

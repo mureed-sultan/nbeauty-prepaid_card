@@ -2,6 +2,8 @@ from odoo import models, fields, api
 from odoo.exceptions import ValidationError, UserError
 from datetime import timedelta, date
 import random
+import re
+
 
 
 class NBeautyPrepaidCard(models.Model):
@@ -99,11 +101,38 @@ class NBeautyPrepaidCard(models.Model):
             }
         }
 
+    import re
+
     @api.model
-    def get_card_info(self, card_no):
-        card = self.search([('name', '=', card_no)], limit=1)
+    def get_card_info(self, query, mode="card_no"):
+        domain = [("state", "=", "active")]
+        cleaned_query = re.sub(r"[^\d+]", "", query)  # Keep only digits and plus
+
+        card = None
+
+        if mode == "card_no":
+            domain.append(("name", "ilike", cleaned_query))
+            card = self.search(domain, limit=1)
+
+        elif mode == "mobile":
+            all_cards = self.search(domain)
+            for rec in all_cards:
+                mobile = rec.customer_id.mobile or ""
+                cleaned_mobile = re.sub(r"[^\d+]", "", mobile)
+                if cleaned_mobile.endswith(cleaned_query):  # Partial match (e.g., last 10 digits)
+                    card = rec
+                    break
+
+        elif mode == "name":
+            domain.append(("customer_id.name", "ilike", query))
+            card = self.search(domain, limit=1)
+
+        else:
+            raise UserError("Invalid search mode.")
+
         if not card:
             return False
+
         return {
             'id': card.id,
             'card_no': card.name,
@@ -112,8 +141,7 @@ class NBeautyPrepaidCard(models.Model):
             'expiry_date': card.expiry_date.strftime('%Y-%m-%d') if card.expiry_date else '',
             'balance': card.balance,
             'state': card.state,
-            'card_type_name': card.card_type_id.name,  # ✅ Added this
-
+            'card_type_name': card.card_type_id.name,
         }
 
     def create_topup_transaction(self, card_id, amount, description, branch_id=False):
@@ -130,13 +158,17 @@ class NBeautyPrepaidCard(models.Model):
 
     @api.model
     def process_ncard_payment(self, card_no, amount, order_uid=None, pos_ref=None, branch_id=None):
+
         card = self.search([('name', '=', card_no)], limit=1)
         if not card:
             raise UserError("Card not found.")
+
         if card.state != 'active':
             raise UserError("Card is not active.")
+
         if card.expiry_date and card.expiry_date < fields.Date.today():
             raise UserError("Card is expired.")
+
         if card.balance < amount:
             raise UserError("Insufficient card balance.")
 
@@ -145,14 +177,36 @@ class NBeautyPrepaidCard(models.Model):
 
         pos_order = self.env['pos.order'].search([('uuid', '=', order_uid)], limit=1)
 
-        self.env['nbeauty.prepaid.card.transaction'].create({
+        vals = {
             'card_id': card.id,
             'amount': amount,
             'transaction_type': 'pos_payment',
             'balance_after': new_balance,
             'description': f'POS Payment {pos_ref or ""}'.strip(),
             'pos_order_id': pos_order.id if pos_order else None,
-            'branch_id': branch_id,
-        })
+        }
+
+        if branch_id:
+            vals['branch_id'] = branch_id
+
+        self.env['nbeauty.prepaid.card.transaction'].create(vals)
 
         return True
+
+    @api.model
+    def search_card_popup(self, query, mode):
+        domain = [("state", "=", "active")]
+
+        if mode == "card_no":
+            domain.append(("name", "ilike", query))
+        elif mode == "mobile":
+            domain.append(("customer_id.mobile", "ilike", query))
+        elif mode == "name":
+            domain.append(("customer_id.name", "ilike", query))
+        else:
+            return []
+
+        return self.search_read(domain, [
+            "id", "name", "balance", "expiry_date", "state",
+            "customer_id", "card_type_id"
+        ], limit=1)
