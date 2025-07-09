@@ -1,0 +1,10 @@
+<odoo>
+  <record id="seq_voucher" model="ir.sequence">
+    <field name="name">Prepaid Voucher</field>
+    <field name="code">nbeauty.voucher</field>
+    <field name="prefix">VOUCH-</field>
+    <field name="padding">5</field>
+    <field name="number_next">1</field>
+    <field name="number_increment">1</field>
+  </record>
+</odoo>

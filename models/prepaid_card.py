@@ -191,7 +191,25 @@ class NBeautyPrepaidCard(models.Model):
 
         self.env['nbeauty.prepaid.card.transaction'].create(vals)
 
+        self._check_and_issue_voucher(card, amount, pos_order)
+
         return True
+
+    def _check_and_issue_voucher(self, card, amount, pos_order):
+        """Auto-issue vouchers based on dynamic rules per card type."""
+        card_type = card.card_type_id
+        min_spend = card_type.min_spend_for_voucher
+        voucher_value = card_type.voucher_amount
+
+        if min_spend and voucher_value and amount >= min_spend:
+            self.env['nbeauty.prepaid.card.voucher'].create({
+                'card_id': card.id,
+                'amount': voucher_value,
+                'voucher_type': 'product',
+                'description': f'Auto-issued after POS payment of AED {amount}',
+                'expiry_date': fields.Date.today() + timedelta(days=180),
+                'pos_order_id': pos_order.id if pos_order else None,
+            })
 
     @api.model
     def search_card_popup(self, query, mode):

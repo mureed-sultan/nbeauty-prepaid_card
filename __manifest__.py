@@ -26,8 +26,10 @@
         'views/prepaid_transaction.xml',
         'views/pos_payment_views.xml',
         'views/prepaid_card_topup_view.xml',
+        'views/prepaid_voucher_views.xml',
         'views/menus.xml',
         'data/cron.xml',
+        'data/voucher_sequence.xml',
         'security/ir.model.access.csv',
 
     ],

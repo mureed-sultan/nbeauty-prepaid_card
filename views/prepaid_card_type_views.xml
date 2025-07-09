@@ -39,10 +39,15 @@
                             <field name="service_discount"/>
                             <field name="product_discount"/>
                         </group>
+                        <group string="Voucher Settings">
+                            <field name="min_spend_for_voucher"/>
+                            <field name="voucher_amount"/>
+                        </group>
                     </group>
 
                     <group string="Cardholder Perks">
-                        <field name="perks" placeholder="e.g. Free quarterly add-ons, AED 250 product voucher after AED 6,000 spend"/>
+                        <field name="perks"
+                               placeholder="e.g. Free quarterly add-ons, AED 250 product voucher after AED 6,000 spend"/>
                     </group>
 
                     <group string="Configuration" invisible="1">

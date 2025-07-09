@@ -17,6 +17,9 @@ class NBeautyPrepaidCardType(models.Model):
     bonus_percentage = fields.Float(string="Bonus (%)", required=True)
     bonus_amount = fields.Monetary(string="Bonus Value (AED)", compute="_compute_bonus_amount", store=True)
 
+    min_spend_for_voucher = fields.Float(string="Min Spend for Voucher")
+    voucher_amount = fields.Float(string="Voucher Value")
+
     service_discount = fields.Float(string="Service Discount (%)")
     product_discount = fields.Float(string="Product Discount (%)")
 
