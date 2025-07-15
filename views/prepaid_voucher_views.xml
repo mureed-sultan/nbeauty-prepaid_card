@@ -48,12 +48,6 @@
     </field>
   </record>
 
-  <!-- New Separate Root Menu for Vouchers -->
-  <menuitem id="menu_voucher_main_root"
-            name="Reward Vouchers"
-            sequence="90"
-            groups="base.group_user"/>
-
   <!-- Action -->
   <record id="action_voucher" model="ir.actions.act_window">
     <field name="name">Reward Vouchers</field>
@@ -64,10 +58,5 @@
     </field>
   </record>
 
-  <!-- Link Action to Menu -->
-  <menuitem id="menu_voucher_access"
-            name="All Vouchers"
-            parent="menu_voucher_main_root"
-            action="action_voucher"
-            sequence="100"/>
+
 </odoo>

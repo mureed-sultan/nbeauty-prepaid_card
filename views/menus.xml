@@ -1,35 +1,39 @@
 <odoo>
-    <!-- Root Menu for Prepaid Cards -->
+    <!-- Root Menu under POS -->
     <menuitem id="menu_nbeauty_prepaid_cards_root"
               name="N Beauty Cards"
-              sequence="10"/>
+              parent="point_of_sale.menu_point_root"
+              sequence="100"/>
 
-    <!-- Prepaid Card Templates Menu -->
+    <!-- Submenus -->
     <menuitem id="menu_nbeauty_prepaid_card_types"
               name="Prepaid Card Templates"
               parent="menu_nbeauty_prepaid_cards_root"
               action="action_prepaid_card_type"
-              sequence="20"/>
+              sequence="10"/>
 
-    <!-- Issued Prepaid Cards Menu -->
     <menuitem id="menu_nbeauty_issued_cards"
               name="Issued Prepaid Cards"
               parent="menu_nbeauty_prepaid_cards_root"
               action="action_prepaid_card"
-              sequence="30"/>
+              sequence="20"/>
 
     <menuitem id="menu_topup_card_wizard"
               name="Top-Up Card"
               parent="menu_nbeauty_prepaid_cards_root"
               action="action_nbeauty_topup_wizard"
-              sequence="35"/>
-
+              sequence="30"/>
 
     <menuitem id="menu_prepaid_transaction_report"
               name="Transaction Report"
               parent="menu_nbeauty_prepaid_cards_root"
               action="nbeauty_prepaid_card.action_prepaid_transaction_report"
-              sequence="60"/>
+              sequence="40"/>
 
-
+    <menuitem id="menu_voucher_access"
+              name="Reward Vouchers"
+              parent="menu_nbeauty_prepaid_cards_root"
+              action="action_voucher"
+              sequence="50"/>
+    
 </odoo>

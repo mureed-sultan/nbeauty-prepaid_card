@@ -26,6 +26,7 @@ class NBeautyPrepaidCardTransaction(models.Model):
         ('bonus', 'Bonus Credit'),
         ('voucher', 'Voucher Issued'),
         ('adjustment', 'Manual Adjustment'),
+        ('issuance', 'Card Issuance'),
         ('refund', 'Refund'),
     ], required=True, string="Transaction Type")
 

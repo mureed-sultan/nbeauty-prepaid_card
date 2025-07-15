@@ -1,5 +1,10 @@
+import requests
+import json
+import logging
 from odoo import models, fields, api
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
 
 
 class NBeautyPrepaidCardTopupWizard(models.TransientModel):
@@ -43,7 +48,7 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
         for rec in self:
             if rec.card_id and rec.card_id.card_type_id:
                 percent = rec.card_id.card_type_id.bonus_percentage or 0.0
-                rec.bonus_amount = (rec.topup_amount or 0.0) * percent / 100
+                rec.bonus_amount = round((rec.topup_amount or 0.0) * percent / 100, 2)
             else:
                 rec.bonus_amount = 0.0
 
@@ -66,6 +71,20 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
 
         self.card_id = card.id
 
+    def action_print_topup_receipt(self):
+        self.ensure_one()
+        report_action = {
+            'type': 'ir.actions.report',
+            'report_name': 'nbeauty_prepaid_card.report_topup_receipt_template',
+            'report_type': 'qweb-pdf',
+            'model': 'nbeauty.prepaid.card.topup.wizard',
+            'context': {
+                'discard_logo_check': True,
+                'force_report_rendering': True
+            }
+        }
+        return report_action
+
     def action_topup(self):
         self.ensure_one()
 
@@ -78,48 +97,84 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
         card_type = self.card_id.card_type_id
         bonus = 0.0
         if card_type:
-            bonus = (self.topup_amount * (card_type.bonus_percentage or 0.0)) / 100
+            bonus = round((self.topup_amount * (card_type.bonus_percentage or 0.0)) / 100, 2)
 
-        # Create top-up transaction
+        previous_balance = round(self.card_id.balance, 2)
+
+        # Create Top-Up transaction
         self.env['nbeauty.prepaid.card.transaction'].create_topup_transaction(
             card_id=self.card_id.id,
             amount=self.topup_amount,
             description=self.description or 'Top-Up',
-            branch_id=getattr(self.card_id, 'branch_id', False).id if getattr(self.card_id, 'branch_id',
-                                                                              False) else False
+            branch_id=getattr(self.card_id, 'branch_id', False).id if getattr(self.card_id, 'branch_id', False) else False
         )
 
-        # Create bonus transaction if applicable
+        # Bonus Transaction
         if bonus > 0:
-            self.card_id.balance += bonus  # Update balance manually
+            self.card_id.balance += bonus
             self.env['nbeauty.prepaid.card.transaction'].create({
                 'card_id': self.card_id.id,
                 'transaction_type': 'bonus',
                 'amount': bonus,
                 'balance_after': self.card_id.balance,
                 'description': 'Bonus Credit',
-                'branch_id': getattr(self.card_id, 'branch_id', False).id if getattr(self.card_id, 'branch_id',
-                                                                                     False) else False,
+                'branch_id': getattr(self.card_id, 'branch_id', False).id if getattr(self.card_id, 'branch_id', False) else False,
             })
 
-        # Show notification, clear fields
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Success',
-                'message': 'Top-up and bonus applied successfully.',
-                'type': 'success',
-                'sticky': False,
+        # --- WhatsApp via WABridge ---
+        if self.customer_phone:
+            phone_number = self.customer_phone.replace("+", "").replace(" ", "")
+            message_body = (
+                f"Dear {self.customer_id.name},\n\n"
+                f"Your NCard ({self.card_id.name}) has been topped up.\n"
+                f"Top-up Amount: {round(self.topup_amount, 2)} AED\n"
+                f"Bonus Amount: {round(bonus, 2)} AED\n"
+                f"Previous Balance: {round(previous_balance, 2)} AED\n"
+                f"New Balance: {round(self.card_id.balance, 2)} AED\n\n"
+                f"Thank you for using our services."
+            )
+
+            payload = json.dumps({
+                "app-key": "d6342231-fbe0-4bf2-b4b9-9475ccb202be",
+                "auth-key": "2d1e0678a72544dbaaf5fc31d2e8b9ec5015c6be085fe44b47",
+                "destination_number": phone_number,
+                "template_id": "24932727729662154",
+                "device_id": "67cfa013e9f65c8638a8fd0b",  # Replace with your real device_id
+                "variables": [
+                    self.customer_id.name,
+                    self.card_id.name,
+                    str(round(self.topup_amount, 2)),
+                    str(round(bonus, 2)),
+                    str(round(previous_balance, 2)),
+                    str(round(self.card_id.balance, 2))
+                ],
+                "button_variable": [],
+                "media": "",
+                "message": message_body
+            })
+
+            headers = {
+                'Content-Type': 'application/json'
             }
-        }
+
+            try:
+                response = requests.post(
+                    "https://web.wabridge.com/api/createmessage",
+                    headers=headers,
+                    data=payload,
+                    timeout=10
+                )
+                _logger.info("WA Bridge Response: %s %s", response.status_code, response.text)
+            except Exception as e:
+                _logger.warning("WA Bridge Exception: %s", e)
+
+        return self.action_print_topup_receipt()
 
     @api.onchange('topup_amount', 'card_id')
     def _onchange_bonus_amount(self):
         for rec in self:
             if rec.card_id and rec.card_id.card_type_id:
                 percent = rec.card_id.card_type_id.bonus_percentage or 0.0
-                rec.bonus_amount = (rec.topup_amount or 0.0) * percent / 100
+                rec.bonus_amount = round((rec.topup_amount or 0.0) * percent / 100, 2)
             else:
                 rec.bonus_amount = 0.0
-

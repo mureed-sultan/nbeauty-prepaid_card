@@ -7,6 +7,7 @@ import { Dialog } from "@web/core/dialog/dialog";
 
 let runtimeNCardData = null; // ✅ Temporarily store card info
 
+
 class NCardPopup extends Component {
     static template = "nbeauty_prepaid_card.NCardPopup";
     static components = { Dialog };
@@ -84,15 +85,11 @@ async fetchCardDetails() {
         this.state.cardInfo = card;
         this.state.error = "";
 
-    } catch (err) {
-        this.state.error = "Server error. Try again.";
-        console.error("Server error:", err);
+        } catch (err) {
+            this.state.error = "Server error. Try again.";
+            console.error("Server error:", err);
+        }
     }
-}
-
-
-
-
     proceed() {
         if (!this.state.cardInfo) {
             this.state.error = "Card not validated.";
@@ -100,7 +97,10 @@ async fetchCardDetails() {
         }
 
         const cardId = this.state.cardInfo.id;
-    const cardNo = this.state.cardInfo.card_no;  // ✅ Use real card number from backend
+        const cardNo = this.state.cardInfo.card_no;
+        const balanceBefore = this.state.cardInfo.balance;
+        const orderTotal = this.props.order.get_total_with_tax();
+        const balanceAfter = balanceBefore - orderTotal;
 
         // ✅ Store in runtime variable
         runtimeNCardData = {
@@ -151,21 +151,65 @@ async validateOrder(isForceValidate) {
     const order = this.currentOrder;
     const totalAmount = order.get_total_with_tax();
 
+      order.get_ncard_data = () => {
+            return {
+                card_no: order.ncard_no || null,
+                previous_balance: order.ncard_previous_balance || 0,
+                amount_used: order.ncard_amount_used || 0,
+                new_balance: order.ncard_new_balance || 0
+            };
+        };
+
     const cardId = runtimeNCardData?.card_id;
     const cardNo = runtimeNCardData?.card_no;
 
-    const orderUID = order?.uuid || "";  // ✅ always set in Odoo 18 OWL
-    const orderRef = order.name || order.pos_reference || "";  // Can be empty
-const branchId = null;  // e.g., "NBS City Life AJM"
+    const orderUID = order?.uuid || "";
+    const orderRef = order.name || order.pos_reference || "";
+    const branchId = null;
+
+    // Initialize default values
+    order.ncard_no = null;
+    order.ncard_previous_balance = 0;
+    order.ncard_amount_used = 0;
+    order.ncard_new_balance = 0;
 
     if (cardId && totalAmount > 0) {
         try {
-            await this.env.services.orm.call(
+            // STEP 1: First get the current card info
+            const cardInfo = await this.env.services.orm.call(
+                "nbeauty.prepaid.card",
+                "get_card_info",
+                [cardNo, "card_no"]
+            );
+
+            if (!cardInfo) {
+                throw new Error("Card information not found");
+            }
+
+            // Store card details before processing payment
+            order.ncard_no = cardNo;
+            order.ncard_previous_balance = cardInfo.balance;
+            order.ncard_amount_used = totalAmount;
+            order.ncard_new_balance = cardInfo.balance - totalAmount;
+
+            // STEP 2: Process the payment (returns just true/false)
+            const paymentSuccess = await this.env.services.orm.call(
                 "nbeauty.prepaid.card",
                 "process_ncard_payment",
-                [cardNo, totalAmount, orderUID, orderRef, branchId]  // ✅ Send values, even if empty
+                [cardNo, totalAmount, orderUID, orderRef, branchId]
             );
+
+            if (!paymentSuccess) {
+                throw new Error("Payment processing failed");
+            }
+
         } catch (err) {
+            // Clear card details if error occurs
+            order.ncard_no = null;
+            order.ncard_previous_balance = 0;
+            order.ncard_amount_used = 0;
+            order.ncard_new_balance = 0;
+
             alert("Card Payment Error: " + (err.message || "Could not deduct from card."));
             console.error("❌ Backend call failed:", err);
             return;

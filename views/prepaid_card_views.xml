@@ -27,7 +27,7 @@
                         <field name="name" string="Card Number" readonly="1"/>
                         <field name="customer_id" string="Customer"/>
                         <field name="card_type_id" string="Card Type"/>
-<!--                        <field name="validity_type" string="Validity Type"/>-->
+                        <field name="validity_type" string="Validity Type"/>
                         <field name="issued_date" string="Issued Date"/>
 
                         <field name="expiry_date"
@@ -40,6 +40,11 @@
                         <field name="state" string="Card Status"/>
                         <field name="currency_id" invisible="1"/>
                     </group>
+                    <button name="action_print_card_receipt"
+                            string="Save Record"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-print"/>
                 </sheet>
             </form>
         </field>
