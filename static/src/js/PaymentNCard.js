@@ -124,7 +124,7 @@ class NCardPopup extends Component {
 }
 
 // ------------------------------------------------------
-// PaymentScreen Patch with WhatsApp API
+// PaymentScreen Patch
 // ------------------------------------------------------
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
@@ -170,7 +170,7 @@ patch(PaymentScreen.prototype, {
 
                 await this.sendWhatsAppMessage(order, runtimeNCardData);
             } catch (err) {
-                console.error("Card Payment Error:", err.message || err);
+                console.error("❌ Card Payment Error:", err.message || err);
                 return;
             } finally {
                 runtimeNCardData = null;
@@ -178,12 +178,19 @@ patch(PaymentScreen.prototype, {
         }
 
         await super.validateOrder(isForceValidate);
+
+        if (order.ncard_data) {
+            await this.env.services.orm.call(
+                "pos.order",
+                "api_set_ncard_data",
+                [order.uuid, order.ncard_data]
+            );
+        }
     },
 
     async sendWhatsAppMessage(order, ncard_data) {
         const partner = order.get_partner();
         if (!partner || !partner.mobile) {
-            console.warn("No mobile found on customer for WhatsApp");
             return;
         }
 
@@ -210,12 +217,9 @@ patch(PaymentScreen.prototype, {
         try {
             await fetch("https://web.wabridge.com/api/createmessage", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
-            console.log("✅ WhatsApp Message Sent to:", phone_number);
         } catch (error) {
             console.warn("❌ WhatsApp Message Failed:", error);
         }
