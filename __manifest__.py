@@ -47,8 +47,8 @@
         'point_of_sale._assets_pos': [
             'nbeauty_prepaid_card/static/src/js/PaymentNCard.js',
             'nbeauty_prepaid_card/static/src/xml/NCardPopup.xml',
-            # 'nbeauty_prepaid_card/static/src/xml/ncard_receipt.xml',
-            # 'nbeauty_prepaid_card/static/src/js/ncard_order_patch.js',
+            'nbeauty_prepaid_card/static/src/xml/ncard_receipt.xml',
+            'nbeauty_prepaid_card/static/src/js/ncard_order_patch.js',
         ],
     },
     'application': True,

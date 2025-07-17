@@ -1,86 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Report Template -->
     <template id="report_card_receipt_template">
         <t t-call="web.html_container">
             <t t-foreach="docs" t-as="o">
-                <!-- Fetch customer record with mobile number -->
                 <t t-set="customer" t-value="o.customer_id"/>
 
                 <div class="article o_report_layout_standard"
-                     t-att-data-oe-model="'nbeauty.prepaid.card'"
-                     t-att-data-oe-id="o.id"
-                     t-att-data-oe-field="description"
-                     t-att-data-oe-lang="o.env.context.get('lang')">
+                     style="width: 300px; margin: 0; font-family: Arial, sans-serif; font-size: 12px;">
 
-                    <div class="receipt" style="width: 300px; margin: 0 auto; font-family: Arial, sans-serif; min-height: 100%;">
-                        <!-- Header -->
-                        <div style="text-align: center; padding-bottom: 15px;">
-                            <h2 style="margin: 5px 0; color: #875A7B;">N BEAUTY SALON L.L.C</h2>
-                            <div style="font-size: 12px; margin-bottom: 5px;">VAT: 104775893100003</div>
-                            <div style="font-size: 12px; margin-bottom: 5px;">N Beauty City Life, Ajman</div>
-                            <div style="font-size: 12px; margin-bottom: 5px;">+971 54 27 22 555</div>
+                    <!-- Header (center-aligned) -->
+                    <div style="text-align: center; padding-bottom: 10px;">
+                        <h3 style="margin: 0; font-size: 14px; font-weight: bold;">N BEAUTY SALON L.L.C</h3>
+                        <div>VAT: 104775893100003</div>
+                        <div>care@nbeauty.ae</div>
+                        <div>http://nbeauty.ae</div>
+                        <div>www.nbeauty.ae</div>
+                        <div>+971 54 27 22 555</div>
+                    </div>
+
+                    <div style="font-weight: bold; border-top: 1px solid black; border-bottom: 1px solid black; padding: 5px 0; margin-bottom: 10px;">
+                        PREPAID CARD ISSUANCE RECEIPT
+                    </div>
+
+                    <!-- Left-aligned details -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Served by:</span><span t-esc="env.user.name or ''"/>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Date:</span><span t-esc="o.issued_date.strftime('%d-%m-%Y %H:%M') if o.issued_date else ''"/>
                         </div>
 
-                        <!-- Title -->
-                        <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 15px;">
-                            <h3 style="margin: 5px 0;">Prepaid Card Receipt</h3>
-                            <div style="font-size: 12px;">Served by: <t t-esc="env.user.name"/></div>
-                            <div style="font-size: 12px;"><t t-esc="o.issued_date"/></div>
+                        <div style="border-bottom: 1px dashed black; margin: 10px 0;"></div>
+
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Card Number:</span><span t-esc="o.name or ''"/>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Customer:</span><span t-esc="customer.name or ''"/>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Mobile:</span><span t-esc="customer.mobile or customer.phone or 'Not Provided'"/>
                         </div>
 
-                        <!-- Card Details -->
-                        <div style="margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span><strong>Card Number:</strong></span>
-                                <span t-field="o.name"/>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span><strong>Customer:</strong></span>
-                                <span t-field="customer.name"/>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span><strong>Mobile:</strong></span>
-                                <span t-esc="customer.mobile or customer.phone or 'Not Provided'"/>
-                            </div>
-                        </div>
+                        <div style="border-bottom: 1px dashed black; margin: 10px 0;"></div>
 
-                        <!-- Amounts -->
-                        <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 10px 0; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>Initial Amount:</span>
-                                <span t-field="o.initial_amount" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>Bonus Amount:</span>
-                                <span t-field="o.bonus_amount" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                                <span>Available Balance:</span>
-                                <span t-field="o.balance" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                            </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Initial Amount:</span>
+                            <span t-field="o.initial_amount" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                         </div>
-
-                        <!-- Footer -->
-                        <div style="text-align: center; font-size: 12px; margin-top: 15px;">
-                            <div>Thank you for choosing our prepaid card service!</div>
-                            <div style="margin-top: 5px;">For inquiries: case@nbeauty.ae</div>
-                            <div style="margin-top: 10px; font-size: 10px;">Powered by Odoo</div>
-                            <div style="font-size: 10px;">
-                                <t t-esc="datetime.datetime.now().strftime('%m/%d/%Y %H:%M:%S')"/>
-                            </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Bonus Amount:</span>
+                            <span t-field="o.bonus_amount" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                            <span>Available Balance:</span>
+                            <span t-field="o.balance" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                         </div>
                     </div>
+
+                    <div style="border-bottom: 1px dashed black; margin: 10px 0;"></div>
+
+                    <!-- Issuance Confirmation Message -->
+                    <div style="font-size: 11px; padding-bottom: 10px; text-align: center;">
+                        This prepaid card has been successfully issued and activated.
+                        Kindly keep this receipt as a reference.
+                    </div>
+
+                    <!-- Footer (center-aligned) -->
+                    <div style="text-align: center; font-size: 11px;">
+                        Thank you for choosing our prepaid card service!<br/>
+                        For inquiries: care@nbeauty.ae
+                    </div>
+
+                    <div style="text-align: center; margin-top: 10px; font-size: 10px;">
+                        Powered by Odoo<br/>
+                        <t t-esc="datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')"/>
+                    </div>
                 </div>
+
+                <script type="text/javascript">
+                    window.onload = function() {
+                        window.print();
+                    };
+                </script>
+
             </t>
         </t>
     </template>
 
-    <!-- Custom Paper Format -->
     <record id="paperformat_prepaid_card" model="report.paperformat">
         <field name="name">Prepaid Card Receipt Format</field>
         <field name="format">custom</field>
-        <field name="page_height">0</field>  <!-- 0 means auto-height -->
+        <field name="page_height">0</field>
         <field name="page_width">300</field>
         <field name="orientation">Portrait</field>
         <field name="margin_top">10</field>
@@ -92,15 +104,14 @@
         <field name="dpi">90</field>
     </record>
 
-    <!-- Report Action for Browser Print -->
     <record id="action_report_prepaid_card_receipt" model="ir.actions.report">
         <field name="name">Prepaid Card Receipt</field>
         <field name="model">nbeauty.prepaid.card</field>
-        <field name="report_type">qweb-html</field>  <!-- Changed to HTML -->
+        <field name="report_type">qweb-html</field>
         <field name="report_name">nbeauty_prepaid_card.report_card_receipt_template</field>
         <field name="paperformat_id" ref="paperformat_prepaid_card"/>
         <field name="binding_model_id" ref="model_nbeauty_prepaid_card"/>
         <field name="binding_type">report</field>
-        <field name="print_report_name">'Prepaid Card Receipt - %s' % (object.name)</field>
+        <field name="print_report_name">'Prepaid Card Receipt - %s' % (object.name or '')</field>
     </record>
 </odoo>

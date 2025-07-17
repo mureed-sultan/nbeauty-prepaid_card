@@ -38,6 +38,13 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
 
     topup_amount = fields.Float(string="Top-Up Amount")
     description = fields.Char(string="Description")
+    display_name = fields.Char(string='Display Name', compute='_compute_display_name', store=True)
+
+    @api.depends('card_id')
+    def _compute_display_name(self):
+        for rec in self:
+            card = rec.card_id.name or 'No Card'
+            rec.display_name = f"Card Top-Up: {card}"
 
     @api.onchange('search_type')
     def _onchange_search_type(self):
@@ -71,20 +78,6 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
 
         self.card_id = card.id
 
-    def action_print_topup_receipt(self):
-        self.ensure_one()
-        report_action = {
-            'type': 'ir.actions.report',
-            'report_name': 'nbeauty_prepaid_card.report_topup_receipt_template',
-            'report_type': 'qweb-pdf',
-            'model': 'nbeauty.prepaid.card.topup.wizard',
-            'context': {
-                'discard_logo_check': True,
-                'force_report_rendering': True
-            }
-        }
-        return report_action
-
     def action_topup(self):
         self.ensure_one()
 
@@ -101,7 +94,7 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
 
         previous_balance = round(self.card_id.balance, 2)
 
-        # Create Top-Up transaction
+        # Top-Up Transaction
         self.env['nbeauty.prepaid.card.transaction'].create_topup_transaction(
             card_id=self.card_id.id,
             amount=self.topup_amount,
@@ -122,7 +115,9 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
             })
 
         # --- WhatsApp via WABridge ---
-        if self.customer_phone:
+        if not self.customer_phone:
+            _logger.warning("Top-Up Completed. But no WhatsApp message sent: Missing customer phone number.")
+        else:
             phone_number = self.customer_phone.replace("+", "").replace(" ", "")
             message_body = (
                 f"Dear {self.customer_id.name},\n\n"
@@ -139,7 +134,7 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
                 "auth-key": "2d1e0678a72544dbaaf5fc31d2e8b9ec5015c6be085fe44b47",
                 "destination_number": phone_number,
                 "template_id": "24932727729662154",
-                "device_id": "67cfa013e9f65c8638a8fd0b",  # Replace with your real device_id
+                "device_id": "67cfa013e9f65c8638a8fd0b",
                 "variables": [
                     self.customer_id.name,
                     self.card_id.name,
@@ -170,11 +165,18 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
 
         return self.action_print_topup_receipt()
 
-    @api.onchange('topup_amount', 'card_id')
-    def _onchange_bonus_amount(self):
-        for rec in self:
-            if rec.card_id and rec.card_id.card_type_id:
-                percent = rec.card_id.card_type_id.bonus_percentage or 0.0
-                rec.bonus_amount = round((rec.topup_amount or 0.0) * percent / 100, 2)
-            else:
-                rec.bonus_amount = 0.0
+    def action_print_topup_receipt(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.report',
+            'report_name': 'nbeauty_prepaid_card.report_topup_receipt_template',
+            'report_type': 'qweb-html',
+            'model': 'nbeauty.prepaid.card.topup.wizard',
+            'context': {
+                'discard_logo_check': True,
+                'force_report_rendering': True
+            }
+        }
+
+    def name_get(self):
+        return [(record.id, record.display_name or 'Card Top-Up') for record in self]

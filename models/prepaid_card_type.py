@@ -12,7 +12,7 @@ class NBeautyPrepaidCardType(models.Model):
     validity = fields.Selection([
         ('monthly', 'Monthly'),
         ('annual', 'Annual')
-    ], string="Validity Period", required=True, default='monthly')
+    ], string="Validity Period", required=True, default='annual')
 
     bonus_percentage = fields.Float(string="Bonus (%)", required=True)
     bonus_amount = fields.Monetary(string="Bonus Value (AED)", compute="_compute_bonus_amount", store=True)

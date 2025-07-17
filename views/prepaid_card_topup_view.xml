@@ -4,7 +4,7 @@
         <field name="name">nbeauty.topup.wizard.form</field>
         <field name="model">nbeauty.prepaid.card.topup.wizard</field>
         <field name="arch" type="xml">
-            <form string="Top-Up Prepaid Card">
+<form string="Card Top-Up: ${object.display_name}">
                 <group string="Search Card">
                     <field name="search_type"/>
                     <field name="search_value"/>
@@ -35,7 +35,7 @@
 
     <!-- Action -->
     <record id="action_nbeauty_topup_wizard" model="ir.actions.act_window">
-        <field name="name">Top-Up Wizard</field>
+        <field name="name">Card Top-Up</field>   <!-- 🔧 Changed here -->
         <field name="res_model">nbeauty.prepaid.card.topup.wizard</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="view_nbeauty_topup_wizard_form"/>
