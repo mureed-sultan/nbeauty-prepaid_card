@@ -7,8 +7,6 @@ import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt
 import { Component, useState, useRef, onMounted } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
 
-let runtimeNCardData = null;
-
 // ------------------------------------------------------
 // NCard Popup Component
 // ------------------------------------------------------
@@ -92,33 +90,21 @@ class NCardPopup extends Component {
     }
 
     proceed() {
-
         if (!this.state.cardInfo) {
             this.state.error = "Card not validated.";
             return;
         }
 
         const cardData = {
-            card_id: this.state.cardInfo.id,
             card_no: this.state.cardInfo.card_no,
             previous_balance: this.state.cardInfo.balance,
             amount_used: this.props.order.get_total_with_tax(),
             new_balance: this.state.cardInfo.balance - this.props.order.get_total_with_tax(),
         };
 
-        runtimeNCardData = cardData;
-
-        this.props.order.ncard_data = {
-            card_no: cardData.card_no,
-            previous_balance: cardData.previous_balance,
-            amount_used: cardData.amount_used,
-            new_balance: cardData.new_balance,
-        };
-
+        this.props.order.setNCardData(cardData);
         this.props.order.add_paymentline(this.props.paymentMethod);
         this.props.close({ confirmed: true });
-            console.log("Order Print Data:", this.props.order.export_for_printing());
-
     }
 
     close() {
@@ -149,53 +135,44 @@ patch(PaymentScreen.prototype, {
 
     async validateOrder(isForceValidate) {
         const order = this.currentOrder;
+        const ncardData = order.getNCardData();
 
-        if (runtimeNCardData) {
+        if (ncardData) {
             try {
                 await this.env.services.orm.call(
                     "nbeauty.prepaid.card",
                     "process_ncard_payment",
                     [
-                        runtimeNCardData.card_no,
-                        runtimeNCardData.amount_used,
+                        ncardData.card_no,
+                        ncardData.amount_used,
                         order.uuid,
                         order.name || "",
                         null
                     ]
                 );
 
-                order.ncard_data = {
-                    card_no: runtimeNCardData.card_no,
-                    previous_balance: runtimeNCardData.previous_balance,
-                    amount_used: runtimeNCardData.amount_used,
-                    new_balance: runtimeNCardData.new_balance,
-                };
+                await this.sendWhatsAppMessage(order, ncardData);
 
-                await this.sendWhatsAppMessage(order, runtimeNCardData);
             } catch (err) {
                 console.error("❌ Card Payment Error:", err.message || err);
                 return;
-            } finally {
-                runtimeNCardData = null;
             }
         }
 
         await super.validateOrder(isForceValidate);
 
-        if (order.ncard_data) {
+        if (ncardData) {
             await this.env.services.orm.call(
                 "pos.order",
                 "api_set_ncard_data",
-                [order.uuid, order.ncard_data]
+                [order.uuid, ncardData]
             );
         }
     },
 
-    async sendWhatsAppMessage(order, ncard_data) {
+    async sendWhatsAppMessage(order, ncardData) {
         const partner = order.get_partner();
-        if (!partner || !partner.mobile) {
-            return;
-        }
+        if (!partner || !partner.mobile) return;
 
         const phone_number = partner.mobile.replace(/\s+/g, '').replace('+', '');
         const payload = {
@@ -206,10 +183,10 @@ patch(PaymentScreen.prototype, {
             "device_id": "67cfa013e9f65c8638a8fd0b",
             "variables": [
                 partner.name || "Customer",
-                ncard_data.card_no,
-                ncard_data.amount_used.toFixed(2),
-                ncard_data.previous_balance.toFixed(2),
-                ncard_data.new_balance.toFixed(2),
+                ncardData.card_no,
+                ncardData.amount_used.toFixed(2),
+                ncardData.previous_balance.toFixed(2),
+                ncardData.new_balance.toFixed(2),
                 order.name || "-"
             ],
             "button_variable": [],
@@ -235,30 +212,31 @@ patch(PaymentScreen.prototype, {
 patch(PosOrder.prototype, {
     export_as_JSON() {
         const json = super.export_as_JSON();
-        if (this.ncard_data) {
-            json.ncard_data = this.ncard_data;
+        if (this.uiState.ncardData) {
+            json.ncard_data = this.uiState.ncardData;
         }
         return json;
     },
 
     export_for_printing(baseUrl, headerData) {
-        const result = super.export_for_printing(baseUrl, headerData);
-        if (this.ncard_data) {
-            result.receipt_ncard_data = {
-                card_no: this.ncard_data.card_no,
-                previous_balance: this.ncard_data.previous_balance,
-                amount_used: this.ncard_data.amount_used,
-                new_balance: this.ncard_data.new_balance,
-            };
+        const result = super.export_for_printing(...arguments);
+        if (this.uiState.ncardData) {
+            result.receipt_ncard_data = this.uiState.ncardData;
         }
-        console.log(this.ncard_data)
-        console.log(result)
         return result;
+    },
+
+    setNCardData(data) {
+        this.uiState.ncardData = data;
+    },
+
+    getNCardData() {
+        return this.uiState.ncardData || null;
     },
 });
 
 // ------------------------------------------------------
-// ReceiptScreen Patch
+// ReceiptScreen Patch (Optional)
 // ------------------------------------------------------
 patch(ReceiptScreen.prototype, {
     setup() {
