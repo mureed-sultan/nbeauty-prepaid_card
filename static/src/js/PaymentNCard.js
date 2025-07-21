@@ -92,6 +92,7 @@ class NCardPopup extends Component {
     }
 
     proceed() {
+
         if (!this.state.cardInfo) {
             this.state.error = "Card not validated.";
             return;
@@ -116,6 +117,8 @@ class NCardPopup extends Component {
 
         this.props.order.add_paymentline(this.props.paymentMethod);
         this.props.close({ confirmed: true });
+            console.log("Order Print Data:", this.props.order.export_for_printing());
+
     }
 
     close() {
@@ -248,6 +251,8 @@ patch(PosOrder.prototype, {
                 new_balance: this.ncard_data.new_balance,
             };
         }
+        console.log(this.ncard_data)
+        console.log(result)
         return result;
     },
 });
