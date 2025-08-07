@@ -24,6 +24,7 @@
 
     'data': [
         'data/prepaid_card_sequence.xml',
+        'data/account_data.xml',
         # 'data/pos_payment_method.xml',
         'data/cron.xml',
         'data/voucher_sequence.xml',
