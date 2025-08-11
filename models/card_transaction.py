@@ -34,6 +34,20 @@ class NBeautyPrepaidCardTransaction(models.Model):
     ], string="Status", default="confirmed", tracking=True)
 
     @api.model
+    def create_topup_transaction(self, card_id, amount, description='', branch_id=None):
+        card = self.env['nbeauty.prepaid.card'].browse(card_id)
+        balance_after = card.balance + amount
+        card.write({'balance': balance_after})
+        return self.create({
+            'card_id': card.id,
+            'amount': amount,
+            'transaction_type': 'topup',
+            'balance_after': balance_after,
+            'description': description or 'Top-Up',
+            'branch_id': branch_id,
+        })
+
+    @api.model
     def create(self, vals):
         record = super().create(vals)
         if record.transaction_type == 'topup':
@@ -92,12 +106,9 @@ class NBeautyPrepaidCardTransaction(models.Model):
         self.ensure_one()
         journal = self.env['account.journal'].search([('code', '=', 'NCARD')], limit=1)
         if not journal:
-            raise UserError(
-                "The journal with code 'NCARD' is missing. Please create it in Accounting > Configuration > Journals.")
-
+            raise UserError("The journal with code 'NCARD' is missing. Please create it in Accounting > Configuration > Journals.")
         liability_account = self._get_account('NCARDLIAB', 'N Card Liability', 'liability_current', True)
         sales_account = self._get_account('NCARDSALES', 'N Card Sales', 'income')
-
         move = self.env['account.move'].create({
             'journal_id': journal.id,
             'move_type': 'entry',
