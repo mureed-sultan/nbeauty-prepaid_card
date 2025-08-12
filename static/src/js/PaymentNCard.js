@@ -117,7 +117,7 @@ class NCardPopup extends Component {
 // ------------------------------------------------------
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
-        if (paymentMethod?.name === "Pay with N Card") {
+if (paymentMethod?.name?.toLowerCase().includes("prepaid card")) {
             const customer = this.currentOrder.get_partner();
             const customerName = customer ? customer.name : "(No customer selected)";
             const { confirmed } = await this.env.services.dialog.add(NCardPopup, {
