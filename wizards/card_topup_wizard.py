@@ -11,14 +11,40 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
     _name = 'nbeauty.prepaid.card.topup.wizard'
     _description = 'Top-Up Prepaid Card'
 
+    # SELECT WHICH DROPDOWN TO USE
     search_type = fields.Selection([
         ('name', 'Customer Name'),
         ('phone', 'Customer Phone'),
         ('card_no', 'Card Number'),
     ], string="Search By", required=True)
 
-    search_value = fields.Char(string="Search For", required=True)
+    # Legacy text box (not used now, but kept in case you need it later)
+    search_value = fields.Char(string="Search For")
 
+    # DROPDOWNS
+    customer_selection_id = fields.Many2one(
+        'res.partner',
+        string="Select Customer",
+        domain="[('customer_rank', '>', 0)]",
+        help="Choose the customer by name."
+    )
+
+    customer_phone_selection_id = fields.Many2one(
+        'res.partner',
+        string="Select Customer (Phone)",
+        domain="[('customer_rank', '>', 0)]",
+        help="Choose the customer by phone number. The dropdown shows the phone if context flag is set."
+    )
+
+    card_selection_id = fields.Many2one(
+        'nbeauty.prepaid.card',
+        string="Select Card Number",
+        help="Choose the card by its number."
+        # NOTE: Do NOT put domain with 'active' unless your card model has an active field
+        # domain=[('active', '=', True)]
+    )
+
+    # RESOLVED/DERIVED FIELDS
     card_id = fields.Many2one('nbeauty.prepaid.card', string="Matched Card", readonly=True)
     customer_id = fields.Many2one(related='card_id.customer_id', store=True, readonly=True)
     customer_phone = fields.Char(
@@ -40,15 +66,20 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
     description = fields.Char(string="Description")
     display_name = fields.Char(string='Display Name', compute='_compute_display_name', store=True)
 
+    # ---- COMPUTES / ONCHANGES ----
     @api.depends('card_id')
     def _compute_display_name(self):
         for rec in self:
-            card = rec.card_id.name or 'No Card'
-            rec.display_name = f"Card Top-Up: {card}"
+            rec.display_name = f"Card Top-Up: {rec.card_id.name or 'No Card'}"
 
     @api.onchange('search_type')
     def _onchange_search_type(self):
+        # Reset UI selections when user switches the search mode
         self.search_value = ""
+        self.customer_selection_id = False
+        self.customer_phone_selection_id = False
+        self.card_selection_id = False
+        self.card_id = False
 
     @api.depends('topup_amount', 'card_id.card_type_id.bonus_percentage')
     def _compute_bonus(self):
@@ -59,20 +90,29 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
             else:
                 rec.bonus_amount = 0.0
 
+    # ---- ACTIONS ----
     def action_fetch_card(self):
         self.ensure_one()
-        val = self.search_value.strip()
-        domain = []
 
         if self.search_type == 'name':
-            domain = [('customer_id.name', 'ilike', val)]
+            if not self.customer_selection_id:
+                raise UserError("Please select a customer.")
+            domain = [('customer_id', '=', self.customer_selection_id.id)]
+
         elif self.search_type == 'phone':
-            domain = [('customer_id.phone', 'ilike', val)]
+            if not self.customer_phone_selection_id:
+                raise UserError("Please select a customer by phone.")
+            domain = [('customer_id', '=', self.customer_phone_selection_id.id)]
+
         elif self.search_type == 'card_no':
-            domain = [('name', '=', val.replace(" ", ""))]
+            if not self.card_selection_id:
+                raise UserError("Please select a card.")
+            domain = [('id', '=', self.card_selection_id.id)]
+
+        else:
+            raise UserError("Invalid search type.")
 
         card = self.env['nbeauty.prepaid.card'].search(domain, limit=1)
-
         if not card:
             raise UserError("No card found matching the given criteria.")
 
@@ -83,7 +123,6 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
 
         if not self.card_id:
             raise UserError("No card selected.")
-
         if self.topup_amount <= 0:
             raise UserError("Top-up amount must be greater than 0.")
 
@@ -114,10 +153,8 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
                 'branch_id': getattr(self.card_id, 'branch_id', False).id if getattr(self.card_id, 'branch_id', False) else False,
             })
 
-        # --- WhatsApp via WABridge ---
-        if not self.customer_phone:
-            _logger.warning("Top-Up Completed. But no WhatsApp message sent: Missing customer phone number.")
-        else:
+        # WhatsApp notification
+        if self.customer_phone:
             phone_number = self.customer_phone.replace("+", "").replace(" ", "")
             message_body = (
                 f"Dear {self.customer_id.name},\n\n"
@@ -128,7 +165,6 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
                 f"New Balance: {round(self.card_id.balance, 2)} AED\n\n"
                 f"Thank you for using our services."
             )
-
             payload = json.dumps({
                 "app-key": "d6342231-fbe0-4bf2-b4b9-9475ccb202be",
                 "auth-key": "2d1e0678a72544dbaaf5fc31d2e8b9ec5015c6be085fe44b47",
@@ -147,11 +183,7 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
                 "media": "",
                 "message": message_body
             })
-
-            headers = {
-                'Content-Type': 'application/json'
-            }
-
+            headers = {'Content-Type': 'application/json'}
             try:
                 response = requests.post(
                     "https://web.wabridge.com/api/createmessage",
@@ -179,4 +211,23 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
         }
 
     def name_get(self):
+        """Keep the wizard's own name_get normal (used for display_name)."""
         return [(record.id, record.display_name or 'Card Top-Up') for record in self]
+
+
+# ------------------------------------------------------------
+# Extend res.partner to show phone in dropdown when context set
+# ------------------------------------------------------------
+class ResPartner(models.Model):
+    _inherit = 'res.partner'
+
+    def name_get(self):
+        res = []
+        for partner in self:
+            display_name = partner.name
+            if partner.mobile:
+                display_name = f"{partner.mobile} - {partner.name}"
+            elif partner.phone:
+                display_name = f"{partner.phone} - {partner.name}"
+            res.append((partner.id, display_name))
+        return res

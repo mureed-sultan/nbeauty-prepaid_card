@@ -4,18 +4,39 @@
         <field name="name">nbeauty.topup.wizard.form</field>
         <field name="model">nbeauty.prepaid.card.topup.wizard</field>
         <field name="arch" type="xml">
-<form string="Card Top-Up: ${object.display_name}">
+            <form string="Card Top-Up: ${object.display_name}">
                 <group string="Search Card">
                     <field name="search_type"/>
-                    <field name="search_value"/>
-                    <button name="action_fetch_card" string="Fetch Card" type="object" class="btn-primary"/>
+
+                    <!-- Name Search (dropdown of customers by name) -->
+                    <field name="customer_selection_id"
+                           options="{'no_create': True}"
+                           invisible="search_type != 'name'"/>
+
+                    <!-- Phone Search (dropdown of customers, but label shows phone via context) -->
+                    <field name="customer_phone_selection_id"
+                           options="{'no_create': True}"
+                           context="{'show_phone_in_name': True}"
+                           invisible="search_type != 'phone'"/>
+
+                    <!-- Card Number Search (dropdown of cards by card number / name_get on the card model) -->
+                    <field name="card_selection_id"
+                           options="{'no_create': True}"
+                           invisible="search_type != 'card_no'"/>
+
+                    <button name="action_fetch_card"
+                            string="Fetch Card"
+                            type="object"
+                            class="btn-primary"/>
                 </group>
+
                 <group string="Card Details">
                     <field name="card_id" readonly="1"/>
                     <field name="customer_id" readonly="1"/>
                     <field name="customer_phone" readonly="1"/>
                     <field name="current_balance" readonly="1"/>
                 </group>
+
                 <group string="Top-Up Info">
                     <field name="topup_amount"/>
                     <field name="bonus_amount" readonly="1"/>
@@ -24,8 +45,9 @@
                             string="Update"
                             type="object"
                             class="btn-success"
-                            modifiers='{"readonly": [["topup_amount", "=", false]]}'/>
+                            invisible="not topup_amount"/>
                 </group>
+
                 <footer>
                     <button string="Cancel" special="cancel"/>
                 </footer>
@@ -35,7 +57,7 @@
 
     <!-- Action -->
     <record id="action_nbeauty_topup_wizard" model="ir.actions.act_window">
-        <field name="name">Card Top-Up</field>   <!-- 🔧 Changed here -->
+        <field name="name">Card Top-Up</field>
         <field name="res_model">nbeauty.prepaid.card.topup.wizard</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="view_nbeauty_topup_wizard_form"/>
