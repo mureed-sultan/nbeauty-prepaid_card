@@ -11,17 +11,17 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
     _name = 'nbeauty.prepaid.card.topup.wizard'
     _description = 'Top-Up Prepaid Card'
 
-    # SELECT WHICH DROPDOWN TO USE
+    # Search filter type
     search_type = fields.Selection([
         ('name', 'Customer Name'),
         ('phone', 'Customer Phone'),
         ('card_no', 'Card Number'),
     ], string="Search By", required=True)
 
-    # Legacy text box (not used now, but kept in case you need it later)
+    # Legacy free text search field (optional, not used for dropdowns)
     search_value = fields.Char(string="Search For")
 
-    # DROPDOWNS
+    # Dropdown fields
     customer_selection_id = fields.Many2one(
         'res.partner',
         string="Select Customer",
@@ -33,18 +33,17 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
         'res.partner',
         string="Select Customer (Phone)",
         domain="[('customer_rank', '>', 0)]",
-        help="Choose the customer by phone number. The dropdown shows the phone if context flag is set."
+        context={'show_phone_only': True},  # 👈 Special flag for phone-only display
+        help="Choose the customer by phone number."
     )
 
     card_selection_id = fields.Many2one(
         'nbeauty.prepaid.card',
         string="Select Card Number",
         help="Choose the card by its number."
-        # NOTE: Do NOT put domain with 'active' unless your card model has an active field
-        # domain=[('active', '=', True)]
     )
 
-    # RESOLVED/DERIVED FIELDS
+    # Related info
     card_id = fields.Many2one('nbeauty.prepaid.card', string="Matched Card", readonly=True)
     customer_id = fields.Many2one(related='card_id.customer_id', store=True, readonly=True)
     customer_phone = fields.Char(
@@ -74,7 +73,6 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
 
     @api.onchange('search_type')
     def _onchange_search_type(self):
-        # Reset UI selections when user switches the search mode
         self.search_value = ""
         self.customer_selection_id = False
         self.customer_phone_selection_id = False
@@ -211,12 +209,11 @@ class NBeautyPrepaidCardTopupWizard(models.TransientModel):
         }
 
     def name_get(self):
-        """Keep the wizard's own name_get normal (used for display_name)."""
         return [(record.id, record.display_name or 'Card Top-Up') for record in self]
 
 
 # ------------------------------------------------------------
-# Extend res.partner to show phone in dropdown when context set
+# Extend res.partner to show only phone in dropdown if flagged
 # ------------------------------------------------------------
 class ResPartner(models.Model):
     _inherit = 'res.partner'
@@ -224,10 +221,20 @@ class ResPartner(models.Model):
     def name_get(self):
         res = []
         for partner in self:
-            display_name = partner.name
-            if partner.mobile:
-                display_name = f"{partner.mobile} - {partner.name}"
-            elif partner.phone:
-                display_name = f"{partner.phone} - {partner.name}"
-            res.append((partner.id, display_name))
+            if self.env.context.get('show_phone_only'):
+                # Only phone/mobile in dropdown
+                if partner.mobile:
+                    res.append((partner.id, partner.mobile))
+                elif partner.phone:
+                    res.append((partner.id, partner.phone))
+                else:
+                    res.append((partner.id, 'No Phone'))
+            else:
+                # Default: Name + phone
+                display_name = partner.name
+                if partner.mobile:
+                    display_name = f"{partner.name} ({partner.mobile})"
+                elif partner.phone:
+                    display_name = f"{partner.name} ({partner.phone})"
+                res.append((partner.id, display_name))
         return res
