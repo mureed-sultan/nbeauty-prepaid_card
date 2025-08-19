@@ -7,6 +7,7 @@
             <list string="Issued Prepaid Cards">
                 <field name="name"/>
                 <field name="customer_id"/>
+                <field name="employee_id"/>
                 <field name="card_type_id"/>
                 <field name="issued_date"/>
                 <field name="expiry_date"/>
@@ -26,6 +27,7 @@
                     <group string="Card Information">
                         <field name="name" string="Card Number" readonly="1"/>
                         <field name="customer_id" string="Customer"/>
+                        <field name="employee_id" string="Employee"/>
                         <field name="card_type_id" string="Card Type"/>
                         <field name="validity_type" string="Validity Type"/>
                         <field name="issued_date" string="Issued Date"/>

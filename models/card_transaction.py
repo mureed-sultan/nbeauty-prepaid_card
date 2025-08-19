@@ -32,20 +32,93 @@ class NBeautyPrepaidCardTransaction(models.Model):
         ('confirmed', 'Confirmed'),
         ('cancelled', 'Cancelled'),
     ], string="Status", default="confirmed", tracking=True)
+    journal_id = fields.Many2one(
+        "account.journal",
+        string="Journal",
+        required=True,
+        default=lambda self: self.env.ref("nbeauty_prepaid_card.account_journal_ncard", raise_if_not_found=False),
+        help="Accounting journal used for this transaction."
+    )
 
     @api.model
-    def create_topup_transaction(self, card_id, amount, description='', branch_id=None):
-        card = self.env['nbeauty.prepaid.card'].browse(card_id)
-        balance_after = card.balance + amount
-        card.write({'balance': balance_after})
-        return self.create({
+    def create_topup_transaction(self, card_id, amount, description="", branch_id=False, journal_id=False):
+        """Create a top-up transaction for a card and (optionally) an account move."""
+        card = self.browse(card_id).exists()
+        if not card:
+            raise UserError(("Card not found."))
+
+        # Update balance on the card
+        new_balance = (card.balance or 0.0) + amount
+        card.write({'balance': new_balance})
+
+        # Prepare tx values
+        tx_vals = {
             'card_id': card.id,
-            'amount': amount,
             'transaction_type': 'topup',
-            'balance_after': balance_after,
+            'amount': amount,
+            'balance_after': new_balance,
             'description': description or 'Top-Up',
-            'branch_id': branch_id,
-        })
+            'journal_id': self.env.ref("nbeauty_prepaid_card.account_journal_ncard").id,
+
+        }
+        if branch_id:
+            tx_vals['branch_id'] = branch_id
+
+        # If caller passed journal_id as record or int, normalize to id for tx_vals
+        if journal_id:
+            # If a record provided, get its id
+            journal_rec = journal_id if isinstance(journal_id, self.env['account.journal'].__class__) else False
+            if not journal_rec:
+                # try browsing by id (works if journal_id is int)
+                journal_rec = self.env['account.journal'].browse(journal_id)
+            if journal_rec and journal_rec.exists():
+                tx_vals['journal_id'] = journal_rec.id
+            else:
+                raise UserError(("Invalid journal selected."))
+
+        # Create transaction row
+        tx = self.env['nbeauty.prepaid.card.transaction'].create(tx_vals)
+
+        # ------------------------------------------------------------
+        # Accounting move (Payment received → Liability)
+        # ------------------------------------------------------------
+        if tx.journal_id:
+            journal = tx.journal_id
+            # fetch our NCard liability account using module xml id
+            ncard_liab = self.env.ref("nbeauty_prepaid_card.ncard_liability_account", raise_if_not_found=False)
+            if not ncard_liab:
+                raise UserError(
+                    ("NCard Liability account is not configured (nbeauty_prepaid_card.ncard_liability_account)."))
+
+            # Ensure journal has a default_account_id
+            if not journal.default_account_id:
+                raise UserError(("Selected journal does not have a default account set."))
+
+            move = self.env['account.move'].create({
+                'journal_id': journal.id,
+                'date': fields.Date.today(),
+                'ref': description or 'Top-Up',
+                'line_ids': [
+                    (0, 0, {
+                        'account_id': journal.default_account_id.id,  # Debit Bank/Cash
+                        'debit': amount,
+                        'credit': 0.0,
+                        'name': description or 'Top-Up',
+                        'partner_id': card.customer_id.id,
+                    }),
+                    (0, 0, {
+                        'account_id': ncard_liab.id,  # Credit Liability
+                        'debit': 0.0,
+                        'credit': amount,
+                        'name': description or 'Top-Up',
+                        'partner_id': card.customer_id.id,
+                    }),
+                ]
+            })
+            move.action_post()
+            tx.account_move_id = move.id
+
+        return tx
 
     @api.model
     def create(self, vals):
