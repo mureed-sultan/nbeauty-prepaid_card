@@ -308,7 +308,7 @@ class NBeautyPrepaidCard(models.Model):
                 raise UserError(_("Invalid journal selected."))
 
             # fetch our NCard liability account
-            ncard_liab = self.env.ref("your_module_name.ncard_liability_account", raise_if_not_found=False)
+            ncard_liab = self.env.ref("nbeauty_prepaid_card.ncard_liability_account", raise_if_not_found=False)
             if not ncard_liab:
                 raise UserError(_("NCard Liability account is not configured."))
 

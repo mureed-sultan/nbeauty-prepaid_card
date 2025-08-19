@@ -39,6 +39,12 @@ class NBeautyPrepaidCardTransaction(models.Model):
         default=lambda self: self.env.ref("nbeauty_prepaid_card.account_journal_ncard", raise_if_not_found=False),
         help="Accounting journal used for this transaction."
     )
+    account_move_id = fields.Many2one(
+        'account.move',
+        string="Journal Entry",
+        readonly=True,
+        help="Accounting entry generated for this transaction."
+    )
 
     @api.model
     def create_topup_transaction(self, card_id, amount, description="", branch_id=False, journal_id=False):
